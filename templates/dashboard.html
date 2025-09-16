@@ -1,0 +1,136 @@
+
+{% extends "base.html" %}
+{% block title %}Dashboard · IPL Web App{% endblock %}
+{% block content %}
+
+<!-- Teams overview -->
+<div class="card">
+  <div class="card-head"><h3>Teams</h3></div>
+  <div class="pill-list">
+    {% for t in teams %}
+      <span class="pill">{{ t }}</span>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Head-to-Head -->
+<div class="card">
+  <div class="card-head"><h3>Head-to-Head</h3></div>
+  <form method="post" action="{{ url_for('dashboard_h2h') }}" class="grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label>Team 1</label>
+      <select name="team1" required>
+        {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Team 2</label>
+      <select name="team2" required>
+        {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="align-end"><button class="btn btn-ipl" type="submit">Compare</button></div>
+  </form>
+  {% if h2h %}
+    <div class="pill-list mt">
+      {% set t1 = request.form.get('team1') %}
+      {% set t2 = request.form.get('team2') %}
+      {% set total = h2h.get('total_matches', h2h.get('total_macthes', 0)) %}
+      <span class="pill">Total: {{ total }}</span>
+      <span class="pill">{{ t1 }}: {{ h2h.get(t1, 0) }}</span>
+      <span class="pill">{{ t2 }}: {{ h2h.get(t2, 0) }}</span>
+      <span class="pill">Draw/NR: {{ h2h.get('draws', (total - h2h.get(t1,0) - h2h.get(t2,0))) }}</span>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Team Record -->
+<div class="card">
+  <div class="card-head"><h3>Team Record</h3></div>
+<form method="post" action="{{ url_for('dashboard_team_record') }}" class="grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label>Team</label>
+      <select name="team" required>
+        {% for t in teams %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="align-end"><button class="btn btn-ipl" type="submit">Load Record</button></div>
+  </form>
+  {% if team_record %}
+    {% set team_name = team_record.keys()|list|first %}
+    {% set overall = team_record[team_name].get('overall', {}) %}
+    <div class="chips mt">
+      <span class="chip">Played: {{ overall.get('matchesplayed','-') }}</span>
+      <span class="chip">Won: {{ overall.get('won','-') }}</span>
+      <span class="chip">Loss: {{ overall.get('loss','-') }}</span>
+      <span class="chip">No Result: {{ overall.get('noResult','-') }}</span>
+      <span class="chip">Titles: {{ overall.get('title','-') }}</span>
+    </div>
+    <div class="table-wrap mt">
+      <table class="table">
+        <thead><tr><th>Opponent</th><th>Played</th><th>Won</th><th>Loss</th><th>No Result</th></tr></thead>
+        <tbody>
+          {% for opp, rec in team_record[team_name].get('against', {}).items() %}
+            <tr>
+              <td>{{ opp }}</td>
+              <td>{{ rec.get('matchesplayed','-') }}</td>
+              <td>{{ rec.get('won','-') }}</td>
+              <td>{{ rec.get('loss','-') }}</td>
+              <td>{{ rec.get('noResult','-') }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</div>
+
+
+
+
+<!-- Player Stats -->
+<div class="card">
+  <div class="card-head"><h3>Player Statistics</h3></div>
+<form method="post" action="{{ url_for('dashboard_player') }}" class="grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div>
+      <label>Type</label>
+      <select name="player_type">
+        <option value="batting" {% if player_type != 'bowling' %}selected{% endif %}>Batsman</option>
+        <option value="bowling" {% if player_type == 'bowling' %}selected{% endif %}>Bowler</option>
+      </select>
+    </div>
+    <div>
+      <label>Name</label>
+      <input name="name" placeholder="e.g., V Kohli or JJ Bumrah" required />
+    </div>
+    <div class="align-end"><button class="btn btn-ipl" type="submit">Get Stats</button></div>
+  </form>
+
+  {% if player %}
+    {% set who = player.keys()|list|first %}
+    {% set all = player[who].get('all', {}) %}
+    <div class="cards mt">
+      {% if player_type != 'bowling' %}
+        <div class="stat-card"><div class="stat-label">Innings</div><div class="stat-value">{{ all.get('innings','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">Runs</div><div class="stat-value">{{ all.get('runs','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">Avg</div><div class="stat-value">{{ all.get('avg','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">SR</div><div class="stat-value">{{ all.get('strikeRate','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">50s</div><div class="stat-value">{{ all.get('fifties','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">100s</div><div class="stat-value">{{ all.get('hundreds','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">HS</div><div class="stat-value">{{ all.get('highestScore','-') }}</div></div>
+      {% else %}
+        <div class="stat-card"><div class="stat-label">Innings</div><div class="stat-value">{{ all.get('innings','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">Wickets</div><div class="stat-value">{{ all.get('wicket','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">Economy</div><div class="stat-value">{{ all.get('economy','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">Average</div><div class="stat-value">{{ all.get('average', all.get('avg','-')) }}</div></div>
+        <div class="stat-card"><div class="stat-label">SR (balls/w)</div><div class="stat-value">{{ all.get('strikeRate','-') }}</div></div>
+        <div class="stat-card"><div class="stat-label">Best</div><div class="stat-value">{{ all.get('best_figure','-') }}</div></div>
+      {% endif %}
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}
